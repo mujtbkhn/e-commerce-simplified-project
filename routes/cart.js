@@ -49,25 +49,35 @@ router.get('/cart', authMiddleware, async (req, res) => {
 })
 router.delete('/cart/:id', authMiddleware, async (req, res) => {
     try {
-        const userId = req.userId
-        const productId = req.body.productId
+        const userId = req.userId;
+        const productId = req.params.id;
 
-        let cart = await Cart.findOne({ user: userId })
+        const cart = await Cart.findOne({ user: userId });
         if (!cart) {
-            cart = new Cart({ user: userId, items: [] })
+            return res.status(404).json({ message: "No cart found for this user" });
+        }
+        const existingItems = cart.items.find(item => item.product.toString() === productId)
+
+        if (existingItems) {
+            existingItems.quantity--
+        } else {
+
+
+            const updatedItems = cart.items.filter(item => item.product.toString() !== productId);
+            cart.items = updatedItems;
         }
 
-       
-        const updatedItems = cart.items.filter(item => item.product.toString() !== productId);
-        cart.items = updatedItems;
-        await cart.save()
+        await cart.save();
+
         res.json({
-            message: "product deleted successfully"
-        })
+            message: "Product removed from cart successfully",
+            cart
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-})
+});
+
 
 module.exports = router
